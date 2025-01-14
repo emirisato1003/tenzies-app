@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Die from './Die';
 import './App.css';
 import { nanoid } from 'nanoid';
 import ReactConfetti from 'react-confetti';
 
 function App() {
-  const [dice, setDice] = useState(generateAllNewDice());
+  const [dice, setDice] = useState(() => generateAllNewDice());
+
+  const [rollCount, setRollCount] = useState(0);
 
   const gameWon = dice.every(die => die.isHeld) && dice.every(die => die.value === dice[0].value);
+
+  const buttonRef = useRef(null);
+  console.log(buttonRef);
+  useEffect(() => {
+    if (gameWon) {
+      buttonRef.current.focus();
+    }
+  }, [gameWon]);
 
   function generateAllNewDice() {
     return new Array(10)
@@ -20,8 +30,13 @@ function App() {
   }
 
   function rollDice() {
-    setDice(prevDice => prevDice.map(die =>
-      die.isHeld ? die : { ...die, value: Math.ceil(Math.random() * 6) }));
+    if (!gameWon) {
+      setDice(prevDice => prevDice.map(die =>
+        die.isHeld ? die : { ...die, value: Math.ceil(Math.random() * 6) }));
+    } else {
+      setDice(generateAllNewDice());
+    }
+    gameWon ? setRollCount(0) : setRollCount(rollCount + 1);
   }
 
   function hold(id) {
@@ -42,14 +57,20 @@ function App() {
   return (
     <main>
       {gameWon && <ReactConfetti />}
+      <div aria-live='polite' className='sr-only'>
+        {gameWon && <p>Congratulations! You won! Press "New Game" to start again.</p>}
+      </div>
       <h1 className="title">Tenzies</h1>
       <p className="instructions">Roll until all dice are the same. Click each die to freeze it at its current value between rolls.</p>
       <div className="dice-container">
         {diceElements}
       </div>
-      <button className='roll-dice' onClick={rollDice}>
+      <button className='roll-dice' onClick={rollDice} ref={buttonRef}>
         {gameWon ? "New Game" : "Roll"}
       </button>
+      <div className="roll-count">
+        Count: <strong>{rollCount}</strong>
+      </div>
     </main>
   );
 }
